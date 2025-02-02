@@ -4,6 +4,8 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"html/template"
+	"strings"
 	"time"
 
 	"github.com/jackc/pgx/v5/pgxpool"
@@ -12,7 +14,7 @@ import (
 type Snippet struct {
 	Id      int
 	Title   string
-	Content string
+	Content template.HTML
 	Created time.Time
 	Expires time.Time
 }
@@ -21,13 +23,13 @@ type SnippetModel struct {
 	DB *pgxpool.Pool
 }
 
-func (m *SnippetModel) Insert(title string, content string, expires int) (int, error) {
+func (m *SnippetModel) Insert(Title string, content string, expires int) (int, error) {
 	var id int
 	err := m.DB.QueryRow(context.Background(),
 		`INSERT INTO snippets (title, content, created, expires)
         VALUES($1, $2, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP + INTERVAL '1 day' * $3)
         RETURNING id`,
-		title, content, expires).Scan(&id)
+		Title, content, expires).Scan(&id)
 
 	if err != nil {
 		return 0, err
@@ -43,15 +45,18 @@ func (m *SnippetModel) Get(id int) (Snippet, error) {
 	row := m.DB.QueryRow(context.Background(), query, id)
 
 	var s Snippet
+	var content string
 
-	err := row.Scan(&s.Id, &s.Title, &s.Content, &s.Created, &s.Expires)
+	err := row.Scan(&s.Id, &s.Title, &content, &s.Created, &s.Expires)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return Snippet{}, ErrNoRecord
-		} else {
-			return Snippet{}, err
 		}
+		return Snippet{}, err
 	}
+
+	// Convert newlines to <br> tags
+	s.Content = template.HTML(strings.Replace(content, "\n", "<br>", -1))
 	return s, nil
 }
 

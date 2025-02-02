@@ -311,3 +311,14 @@ footer {
     color: #6A6C6F;
     text-align: center;
 }
+
+pre {
+    background-color: #f4f4f4;
+    padding: 1em;
+    border-radius: 4px;
+    white-space: pre-wrap;
+}
+
+code {
+    font-family: 'Ubuntu Mono', monospace;
+}
